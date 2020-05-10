@@ -1,0 +1,25 @@
+{
+  "name": "eth_trans",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SteveWooo/eth_trans.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SteveWooo/eth_trans/issues"
+  },
+  "homepage": "https://github.com/SteveWooo/eth_trans#readme",
+  "dependencies": {
+    "ethereumjs-tx": "^1.3.7",
+    "solc": "^0.4.17",
+    "web3": "^1.2.7",
+    "web3-shh": "^1.2.7"
+  }
+}
