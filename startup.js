@@ -189,7 +189,6 @@ async function sendLotsTrans(){
  * 转账测试
  */
 async function transTest(){
-
     var rawTx = {
         'from': accounts[1].publicKey,
         'to' : accounts[0].publicKey,
@@ -199,7 +198,7 @@ async function transTest(){
         'value': '0x' + parseInt(web3.utils.toWei('1', 'ether')).toString(16),
         'data': ''
     };
-
+    // hh
     var tx = new Tx(rawTx);
     tx.sign(Buffer.from(accounts[1].privateKey, 'hex'));
     var serializedTx = tx.serialize();
