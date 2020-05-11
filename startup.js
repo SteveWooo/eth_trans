@@ -39,6 +39,7 @@ async function createPK(){
 }
 
 async function checkAllAccountBalance(){
+    await getBalance(Config.publicKey);
     for(var i=0;i<accounts.length;i++) {
         await getBalance(accounts[i].publicKey);
     }
@@ -160,28 +161,15 @@ async function sendTrans(){
  */
 async function sendLotsTrans(){
     const contractData = require(`${__dirname}/example/colContract.json`);
-    let contract = new web3.eth.Contract(JSON.parse(contractData.abi), contractData.hashTx.contractAddress);
+    const sendTrans = require(`${__dirname}/Utils/sendTrans`);
     for(var i=0;i<1;i++) {
-        // let privateKey = require('crypto').randomBytes(32);
-        // let publicKey = web3.eth.accounts.privateKeyToAccount(privateKey.toString('hex'));
-        // 调用合约
-        let data = contract.methods.add(3, 5).encodeABI();
-        var rawTx = {
-            'from': accounts[1].publicKey,
-            'to' : contractData.hashTx.contractAddress,
-            'nonce': 0,
-            'gasPrice': web3.eth.gasPrice,
-            'gasLimit': web3.utils.toHex(3123400),
-            'value': '0x0',
-            'data': data
-        };
-
-        var tx = new Tx(rawTx);
-        tx.sign(Buffer.from(accounts[1].privateKey, 'hex'));
-        var serializedTx = tx.serialize();
-
-        var hashTx = await web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
-        console.log(hashTx);
+        sendTrans({
+            account: accounts[i],
+            web3 : web3,
+            contractData : contractData
+        }).then(result=>{
+            console.log(`done: ${accounts[i].publicKey}`);
+        })
     }
 }
 
@@ -192,8 +180,8 @@ async function transTest(){
     var rawTx = {
         'from': accounts[1].publicKey,
         'to' : accounts[0].publicKey,
-        'nonce': 3,
-        'gasPrice': web3.eth.gasPrice,
+        'nonce': await web3.eth.getTransactionCount(accounts[1].publicKey),
+        'gasPrice': web3.utils.toHex(2100),
         'gasLimit': web3.utils.toHex(3123400),
         'value': '0x' + parseInt(web3.utils.toWei('1', 'ether')).toString(16),
         'data': ''
@@ -208,22 +196,47 @@ async function transTest(){
     return ;
 }
 
+/**
+ * 矿工账号给小弟们赚点钱花花
+ */
+async function transToKids() {
+    let promises = [];
+    for(var i=0;i<accounts.length;i++) {
+        var rawTx = {
+            'from': Config.publicKey,
+            'to' : accounts[i].publicKey,
+            'nonce': await web3.eth.getTransactionCount(Config.publicKey) + i,
+            // 'gasPrice': await web3.eth.getGasPrice(),
+            'gasPrice': web3.utils.toHex(20),
+            'gasLimit': web3.utils.toHex(3123400),
+            'value': '0x' + parseInt(web3.utils.toWei('1', 'ether')).toString(16),
+            'data': ''
+        };
+
+        var tx = new Tx(rawTx);
+        tx.sign(Buffer.from(Config.privateKey, 'hex'));
+        var serializedTx = tx.serialize();
+        var hashTx = web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
+        promises.push(hashTx);
+    }
+    let finalResult = await Promise.all(promises);
+    console.log(finalResult)
+    return ;
+}
+
 async function main(){
     // await getPrivate();
     // await createPK();
-
     // await deployERC20();
-    // await deployContract();
-    
     // await sendTrans();
-
     // await callContract();
-    await sendLotsTrans();
     // await getTransaction('0xc500f35d0047ae73d04d3a5727951230327d014cddd333f35c4d2298c49c68fd');
-
     // await transTest();
 
-    // await checkAllAccountBalance()
+    // await deployContract();
+    // await sendLotsTrans();
+    await transToKids();
+    await checkAllAccountBalance();
 }
 main()
 
