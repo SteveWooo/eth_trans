@@ -12,6 +12,9 @@ let Web3 = require('web3');
 let web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 let accounts = require(`${__dirname}/example/accounts`)
 
+/**
+ * 从文件里面拿密钥出来的骚操作，现在也没啥必要了，直接写成字符串就完事了
+ */
 async function getPrivate(){
     let result = await web3.eth.accounts.decrypt(JSON.parse(fs.readFileSync(`${__dirname}/config/UTC--2020-05-10T06-35-48.099600300Z--dbb8ccb1f8b158ecf2c478b8cc83e3b4f9ad090b`).toString()), Config.password);
     Config.publicKey = result.address;
@@ -23,6 +26,9 @@ async function getPrivate(){
     return ;
 }
 
+/**
+ * 捞一个密钥出来
+ */
 async function createPK(){
     let accounts = [];
     for(var i=0;i<10;i++) {
@@ -38,6 +44,9 @@ async function createPK(){
     fs.writeFileSync(`${__dirname}/example/accounts.json`, JSON.stringify(accounts));
 }
 
+/**
+ * 从api里面拿出所有密钥
+ */
 async function checkAllAccountBalance(){
     await getBalance(Config.publicKey);
     for(var i=0;i<accounts.length;i++) {
@@ -49,11 +58,35 @@ async function getBalance(address) {
     console.log(`${address} balance: ${web3.utils.fromWei(await web3.eth.getBalance(address))} eth`);
 }
 
+/**
+ * 获取交易中的信息
+ */
 async function getTransaction(transAddr){
     let trans = await web3.eth.getTransaction(transAddr);
-    console.log(trans)
+    /**
+     * 交易信息中有一个input字段，对应发送交易的data
+     */
+    function parseInput(input){
+        input = input.substring(2);
+        let temp = [];
+        for(var i=0;i<=input.length;i++) {
+            if(i != 0 && i%2 == 0) {
+                let char = input.substring(i-2, i);
+                char = parseInt(char, 16);
+                temp.push(String.fromCharCode(char));
+            }
+        }
+        return temp.join('');
+    }
+    if(trans.input == undefined) {
+        return ;
+    }
+    console.log(`input: ${parseInput(trans.input)}`);
 }
 
+/**
+ * 调用合约
+ */
 async function callContract(){
     const contractData = require(`${__dirname}/example/colContract.json`);
     let contract = new web3.eth.Contract(JSON.parse(contractData.abi), contractData.hashTx.contractAddress);
@@ -61,11 +94,13 @@ async function callContract(){
     console.log(result);
 }
 
+/**
+ * 暂时没啥用
+ */
 async function deployERC20(){
     const solInput = fs.readFileSync(`${__dirname}/example/erc20.sol`, 'utf8').toString();
     const solOutput = solc.compile(solInput, 1);
     console.log(`compile successed!`);
-    console.log(solOutput)
     var bytecode = solOutput.contracts[':ERC20'].bytecode;
     var abi = solOutput.contracts[':ERC20'].interface;
     var count = await web3.eth.getTransactionCount(Config.publicKey);
@@ -100,6 +135,9 @@ async function deployERC20(){
     return ;
 }
 
+/**
+ * 部署合约
+ */
 async function deployContract(){
     const solInput = fs.readFileSync(`${__dirname}/example/col.sol`, 'utf8').toString();
     const solOutput = solc.compile(solInput, 1);
@@ -107,20 +145,19 @@ async function deployContract(){
     var bytecode = solOutput.contracts[':Calc'].bytecode;
     var abi = solOutput.contracts[':Calc'].interface;
     var count = await web3.eth.getTransactionCount(Config.publicKey);
-    var gasPrice = web3.eth.gasPrice;
-    var gasLimit = 3000000;
+    var gasLimit = 268435455;
     //要打包的交易信息
     var rawTx = {
         'from': Config.publicKey,
         'nonce': web3.utils.toHex(count),
-        'gasPrice': web3.utils.toHex(gasPrice),
+        'gasPrice': web3.utils.toHex(0),
         'gasLimit': web3.utils.toHex(gasLimit),
         'value': '0x0',
         'data': '0x' + bytecode
     };
 
     var tx = new Tx(rawTx);
-    tx.sign(Buffer.from(Config.privateKey.substring(2), 'hex'));
+    tx.sign(Buffer.from(Config.privateKey.substring(0), 'hex'));
     var serializedTx = tx.serialize();
 
     var hashTx = await web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
@@ -137,7 +174,10 @@ async function deployContract(){
     return ;
 }
 
-async function sendTrans(){
+/**
+ * 调用一个合约
+ */
+async function sendTransForContract(){
     const contractData = require(`${__dirname}/example/colContract.json`);
     // console.log(contractData);
     let contract = new web3.eth.Contract(JSON.parse(contractData.abi), contractData.hashTx.contractAddress);
@@ -178,17 +218,18 @@ async function sendLotsTrans(){
  */
 async function transTest(){
     var rawTx = {
-        'from': accounts[1].publicKey,
+        'from': Config.publicKey,
         'to' : accounts[0].publicKey,
-        'nonce': await web3.eth.getTransactionCount(accounts[1].publicKey),
-        'gasPrice': web3.utils.toHex(2100),
-        'gasLimit': web3.utils.toHex(3123400),
+        'nonce': await web3.eth.getTransactionCount(Config.publicKey),
+        'gasPrice': web3.utils.toHex(21000),
+        'gasLimit': web3.utils.toHex(30000),
+        // 'gasLimit' : 0xffffffff,
         'value': '0x' + parseInt(web3.utils.toWei('1', 'ether')).toString(16),
-        'data': ''
+        'data': 'hihihihihi'
     };
     // hh
     var tx = new Tx(rawTx);
-    tx.sign(Buffer.from(accounts[1].privateKey, 'hex'));
+    tx.sign(Buffer.from(Config.privateKey, 'hex'));
     var serializedTx = tx.serialize();
 
     var hashTx = await web3.eth.sendSignedTransaction('0x'+serializedTx.toString('hex'));
@@ -207,9 +248,9 @@ async function transToKids() {
             'to' : accounts[i].publicKey,
             'nonce': await web3.eth.getTransactionCount(Config.publicKey) + i,
             // 'gasPrice': await web3.eth.getGasPrice(),
-            'gasPrice': web3.utils.toHex(20),
-            'gasLimit': web3.utils.toHex(3123400),
-            'value': '0x' + parseInt(web3.utils.toWei('1', 'ether')).toString(16),
+            'gasPrice': web3.utils.toHex(21000),
+            'gasLimit': web3.utils.toHex(30000),
+            'value': '0x' + parseInt(web3.utils.toWei('1', 'ether')).toString(16), // 转账金额
             'data': ''
         };
 
@@ -228,9 +269,10 @@ async function main(){
     // await getPrivate();
     // await createPK();
     // await deployERC20();
-    // await sendTrans();
+    // await sendTransForContract();
     // await callContract();
-    // await getTransaction('0xc500f35d0047ae73d04d3a5727951230327d014cddd333f35c4d2298c49c68fd');
+    // await getTransaction('0x2a60546834f3e5dbf26cc8112c9c0e053b981ad958e952092be97d82e6c4fe10');
+
     // await transTest();
 
     // await deployContract();
@@ -239,9 +281,3 @@ async function main(){
     await checkAllAccountBalance();
 }
 main()
-
-
-
-
-
-
