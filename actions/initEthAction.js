@@ -5,10 +5,12 @@ const fs = require("fs");
 let Web3 = require('web3');
 
 let accounts = require(`${__dirname}/../example/accounts`);
+let attackers = require(`${__dirname}/../example/attackers`);
 const Config = {
     publicKey : '0xdbb8ccb1f8b158ecf2c478b8cc83e3b4f9ad090b', // 矿工的hash我就写死了
     privateKey : 'cecd0e79abcbb9040225d940915fafe7d712cbbdb6aea27f8434dc1ec660f44c',
-    accounts : accounts
+    accounts : accounts,
+    attackers : attackers
 }
 const solc = require('solc');
 const Tx = require('ethereumjs-tx');
@@ -23,9 +25,15 @@ async function logBalance(address) {
     console.log(`${address} balance: ${web3.utils.fromWei(await web3.eth.getBalance(address))} eth`);
 }
 async function checkAllBalance(){
+    console.log('miner:')
     await logBalance(Config.publicKey);
+    console.log('normal accounts:');
     for(var i=0;i<accounts.length;i++) {
         await logBalance(accounts[i].publicKey);
+    }
+    console.log('attackers:');
+    for(var i=0;i<attackers.length;i++) {
+        await logBalance(attackers[i].publicKey);
     }
 }
 
