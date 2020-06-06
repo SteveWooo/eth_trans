@@ -36,14 +36,26 @@ async function checkAllBalance(){
         await logBalance(attackers[i].publicKey);
     }
 }
+async function dumpBalance(accounts) {
+    for(var i=0;i<accounts.length;i++) {
+        await logBalance(accounts[i].publicKey);
+    }
+}
 
-async function sendTrans(from, to, total, nonceIncrease=0) {
+/**
+ * dump account nonce
+ */
+async function dunpNonce(account) {
+    console.log(await web3.eth.getTransactionCount(account.publicKey));
+}
+
+async function sendTrans(from, to, total, nonceIncrease=0, gasPrice=21000) {
     var rawTx = {
         'from': from.publicKey,
         'to' : to.publicKey,
         'nonce': await web3.eth.getTransactionCount(from.publicKey) + nonceIncrease,
         // 'gasPrice': await web3.eth.getGasPrice(),
-        'gasPrice': web3.utils.toHex(21000),
+        'gasPrice': web3.utils.toHex(gasPrice),
         'gasLimit': web3.utils.toHex(30000),
         'value': '0x' + parseInt(web3.utils.toWei(total+'', 'ether')).toString(16), // 转账金额
         'data': ''
@@ -64,8 +76,9 @@ async function init(){
 
     let handle = {
         checkAllBalance : checkAllBalance,
-
-        sendTrans : sendTrans
+        dumpBalance : dumpBalance,
+        sendTrans : sendTrans,
+        dunpNonce : dunpNonce
     }
 
     obj.handle = handle;

@@ -9,6 +9,19 @@ let genKeys = function(ets){
     console.log(`privateKey : ${privateKey}`);
 }
 
+/**
+ * 256个账号，每个账号发16笔交易，压满了本地4096个pending，压满了外地4096个pending
+ * 然后用前16个账号发一笔17号交易给local，local会把这笔17号交易广播给remote，remote会放弃这笔交易，不放进pending。
+ * 然后用前16个账号从18号开始，发64笔交易给local，local把这64笔交易广播给remote，remote全部放进queued。
+ * （以上就能塞满remote的txpool
+ * （其中pending的每个account上限是16，queued中每个account上限是64；pending总上限4096，queued总上限1024
+ * 
+ * 这个时候用17号账号发第17号交易，就会挤掉1号账号的第16号交易。
+ * 这时候remote pending中1号账号的交易数为15，17号账号的交易数为17
+ * 
+ * 这个时候用17号账号发第18笔交易，会挤掉1号账号的15号交易。
+ * 这时候1号账号的remote pending池中剩下14笔交易，17号账号的交易数为18
+ */
 async function main(){
     let ea = await require(`${__dirname}/actions/initEthAction`)();
     ea.web3.eth.extend({
@@ -24,9 +37,10 @@ async function main(){
             call: 'txpool_status'
         }]
     });
+    global.ea = ea;
+
     let ets = {
-        ea: ea,
-        attack : await require(`${__dirname}/actions/initAttack`)(ea)
+        attack : await require(`${__dirname}/actions/initAttack`)()
     }
     // await ets.ea.handle.checkAllBalance();
     // trans money to attacker
@@ -34,7 +48,11 @@ async function main(){
     // await ets.ea.handle.sendTrans(ets.ea.Config, ets.ea.Config.attackers[0], 100);
     // return ;
 
-    await ets.attack.handle.attack();
+    // await ets.attack.handle.test();
+    // await ets.attack.handle.attackFor256.init();
+    // await ets.attack.handle.attackFor256.start();
+    await ets.attack.handle.attackFor256.checkTxPool();
+
     // console.log(await ea.web3.eth.txpool.content())
     
 }
