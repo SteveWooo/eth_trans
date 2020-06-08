@@ -21,6 +21,11 @@ let genKeys = function(ets){
  * 
  * 这个时候用17号账号发第18笔交易，会挤掉1号账号的15号交易。
  * 这时候1号账号的remote pending池中剩下14笔交易，17号账号的交易数为18
+ * 
+ * 5120个账号
+ * 全部账号发1笔交易，填满pending5120缓冲区之后，再来新的任何一笔交易，remote都不接受了。
+ * 比如主账号发一笔转账，remote不接受。
+ * 比如attacker[0] 发一笔nonce多1的交易，remote不接受。
  */
 async function main(){
     let ea = await require(`${__dirname}/actions/initEthAction`)();
@@ -51,7 +56,11 @@ async function main(){
     // await ets.attack.handle.test();
     // await ets.attack.handle.attackFor256.init();
     // await ets.attack.handle.attackFor256.start();
-    await ets.attack.handle.attackFor256.checkTxPool();
+    // await ets.attack.handle.attackFor256.checkTxPool();
+
+    // await ets.attack.handle.attackerFor5120.init();
+    // await ets.attack.handle.attackerFor5120.attack();
+    await ets.attack.handle.attackerFor5120.checkTxPool();
 
     // console.log(await ea.web3.eth.txpool.content())
     
